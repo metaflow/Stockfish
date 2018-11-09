@@ -1,0 +1,6 @@
+Stockfish 091118 64 by T. Romstad, M. Costalba, J. Kiiski, G. Linscott
+1.  c2c4  c7c5 3. Qd1a4 Qd8a5 5. Qa4c6 Qa5c3 7. Qc6c8 
+1.  c2c3  c7c6 3.  e2e3  e7e6 5. Nb1a3 Nb8a6 7. Na3c4 Na6c5 9. Ng1e2 Ng8e7 11. Nc4d6 
+1.  c2c4  c7c5 3.  d2d4  d7d5 5.  c4d5  c5d4 7.  d5d6  d4d3 9.  d6e7  d3e2 11.  e7d8=Q 
+1. Ng1f3 Ng8f6 3. Nf3g5 Nf6g4 5. Ng5h7 Ng4h2 7. Nh7f8 Nh2f1 9. Nf8e6 Nf1e3 11. Rh1h8 
+1.  b2b3  b7b6 3.  e2e3  e7e6 5.  f2f3  f7f6 7. Bf1d3 Bf8d6 9. Bd3h7 Bd6h2 11. Bc1a3 Bc8a6 13. Bh7g6 

@@ -19,6 +19,9 @@
 */
 
 #include <iostream>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 #include "bitboard.h"
 #include "position.h"
@@ -32,11 +35,94 @@ namespace PSQT {
   void init();
 }
 
-int main(int argc, char* argv[]) {
+Square mirror(const Square s) {
+  return make_square(file_of(s), Rank((int)RANK_8 - rank_of(s)));
+}
 
+const std::string PieceToChar("  NBRQK   NBRQK");
+const std::string FileToChar("abcdefgh");
+void record(int d, std::vector<Move>& h) {
+  Position p;
+  StateInfo s;
+  p.set("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", false, &s, Threads.main());
+  for (int i = 0; i < d; i++) {
+    if (i % 2 == 0) std::cout << i + 1 << ". ";
+    Move m = h[i];
+    Square from = from_sq(m);
+    Square to = to_sq(m);
+    Piece piece = p.piece_on(from);
+    std::cout << PieceToChar[piece]
+              << FileToChar[file_of(from)] << (int)rank_of(from) + 1
+              << FileToChar[file_of(to)] << (int)rank_of(to) + 1;
+    if (type_of(m) == PROMOTION) {
+      std::cout << '=' << PieceToChar[promotion_type(m)];
+    }
+    std::cout << ' ';
+    StateInfo n;
+    p.do_move(m, n);
+  }
+  std::cout << std::endl;
+}
+
+bool dfs(Position& p, int depth, std::unordered_map<Key, int>& visited,
+         std::vector<Move>& h, std::unordered_set<PieceType>& found) {
+  if (depth * 2 + 1 >= (int)h.size()) {
+    return false;
+  }
+  MoveList<LEGAL> ms(p);
+  for (const auto& m : ms) {
+    StateInfo s;
+    Square m_from = from_sq(m);
+    Square m_from_m = mirror(m_from);
+    Square m_to = to_sq(m);
+    Square m_to_m = mirror(m_to);
+    PieceType m_promo = promotion_type(m);
+    PieceType m_piece = type_of(p.piece_on(m_from));
+    bool check = p.gives_check(m);
+    p.do_move(m, s, check);
+    h[depth * 2] = m;
+    MoveList<LEGAL> as(p);
+    Move a(MOVE_NONE);
+    for (const auto& x : as) {
+      if (from_sq(x) == m_from_m &&
+          to_sq(x) == m_to_m &&
+          type_of(p.piece_on(from_sq(x))) == m_piece &&
+          promotion_type(x) == m_promo) {
+        a = x;
+        break;
+      }
+    }
+    if (a == MOVE_NONE) {
+      if (check && as.size() == 0) {
+        PieceType t = m_piece;
+        if (type_of(m) == PROMOTION) t = NO_PIECE_TYPE;
+        if (found.count(t) == 0) {
+          found.emplace(t);
+          std::cerr << p << std::endl;
+          record(depth * 2 + 1, h);
+          if (found.size() == 7) return true;
+        }
+      }
+    } else {
+      StateInfo s2;
+      p.do_move(a, s2);
+      h[depth * 2 + 1] = a;
+      Key k = p.key();
+      if (visited[k] < h.size() - depth) {
+        visited[k] = depth;
+        if (dfs(p, depth + 1, visited, h, found)) return true;
+      }
+      p.undo_move(a);
+    }
+    p.undo_move(m);
+  }
+  return false;
+}
+
+int main(int argc, char* argv[]) {
   std::cout << engine_info() << std::endl;
 
-  UCI::init(Options);
+  // UCI::init(Options);
   PSQT::init();
   Bitboards::init();
   Position::init();
@@ -45,10 +131,21 @@ int main(int argc, char* argv[]) {
   Pawns::init();
   Tablebases::init(Options["SyzygyPath"]); // After Bitboards are set
   Threads.set(Options["Threads"]);
-  Search::clear(); // After threads are up
+  // Search::clear(); // After threads are up
 
-  UCI::loop(argc, argv);
+  // UCI::loop(argc, argv);
 
-  Threads.set(0);
+  Threads.set(1);
+  Position p;
+  StateInfo state;
+  p.set("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", false, &state, Threads.main());
+  std::vector<Move> h(5, MOVE_NONE);
+  std::unordered_set<PieceType> found;
+  while (1) {
+    h.emplace_back(MOVE_NONE);
+    h.emplace_back(MOVE_NONE);
+    std::unordered_map<Key, int> visited;
+    if (dfs(p, 0, visited, h, found)) break;
+  }
   return 0;
 }
